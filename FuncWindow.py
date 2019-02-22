@@ -219,7 +219,7 @@ class CAddData(BaseWindow):
             os.system("touch %s" % path)
         fp = open(path, 'a+')
         fp.write('\n\n')
-        fp.write(_text.replace('\n', ''))
+        fp.write(_text.replace('\n', '|'))
         fp.close()
 
         self.destroy()
