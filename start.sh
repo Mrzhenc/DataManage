@@ -1,4 +1,4 @@
 #!/bin/bash
 
-cd /opt/software/
-python /opt/software/Start.py &
+cd /opt/DataManage/
+python /opt/DataManage/Start.py &
