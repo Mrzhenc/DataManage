@@ -155,7 +155,7 @@ def image_from_file(image_file):
 
 
 def res_file_get(_filename):
-    return os.path.join(os.getcwd(), _filename)
+    return os.path.join(os.getcwd() + "/UI", _filename)
 
 
 def new_btn_fixed(image_name):
