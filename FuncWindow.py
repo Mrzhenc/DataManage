@@ -174,8 +174,8 @@ class CFindData(BaseWindow):
 class CDeleteData(BaseWindow):
     def __init__(self, _parent):
         super(CDeleteData, self).__init__(_parent)
-        self.set_window_title("数据删除")
-        self.set_label("数据删除")
+        self.set_window_title("病史修改")
+        self.set_label("病史修改")
         self.show_all()
 
 
