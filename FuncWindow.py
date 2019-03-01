@@ -40,7 +40,7 @@ class CFuncWindow(gtk.Window):
         _fixed.set_size_request(FUN_BTN_SIZE_X, FUN_BTN_SIZE_Y)
         _fixed.put(image, 0, 0)
         _delete_btn = gtk.Button()
-        _delete_btn.connect('clicked', self.btn_cb, 'delete')
+        _delete_btn.connect('clicked', self.btn_cb, 'modify')
         _delete_btn.add(_fixed)
         self.fixed.put(_delete_btn, start_x+FUN_BTN_SIZE_X, start_y)
 
@@ -56,8 +56,8 @@ class CFuncWindow(gtk.Window):
     def btn_cb(self, widget, opt):
         if 'add' == opt:
             CAddData(self)
-        elif 'delete' == opt:
-            CDeleteData(self)
+        elif 'modify' == opt:
+            CModifyData(self)
         elif 'find' == opt:
             CFindData(self)
 
@@ -68,8 +68,10 @@ class BaseWindow(gtk.Window):
         self.set_size_request(SUB_WINDOW_X, SUB_WINDOW_Y)
         self.set_position(gtk.WIN_POS_CENTER)
         self.set_modal(True)
+        self.set_decorated(False)
         self.set_keep_above(True)
         self.set_transient_for(_parent)
+        self.is_save = False
 
         self.fixed = gtk.Fixed()
         self.add(self.fixed)
@@ -77,7 +79,12 @@ class BaseWindow(gtk.Window):
         _textBuf = gtk.TextBuffer()
         self.__textView = gtk.TextView(_textBuf)
         self.ok_btn = gtk.Button('确定')
+        self.__type_entry = gtk.Entry()
         self.ui_init()
+
+    def get_is_save(self): return self.is_save
+
+    def set_is_save(self, flag): self.is_save = flag
 
     def set_btn_label(self, _label):
         self.ok_btn.set_label(_label)
@@ -91,13 +98,79 @@ class BaseWindow(gtk.Window):
         modify_font(self.title_label, 30)
         self.fixed.put(self.title_label, (SUB_WINDOW_X-300)/2, 50)
 
+        start_x = (SUB_WINDOW_X - 400) / 2
+        start_y = 120
+        _label = gtk.Label("病史类型")
+        modify_font(_label, 15)
+        self.fixed.put(_label, start_x, start_y)
+
+        start_y += 35
+        self.__type_entry.set_size_request(200, 30)
+        self.fixed.put(self.__type_entry, start_x, start_y)
+
+        start_y += 35
+        self.add_scroll(start_x, start_y)
+
         self.ok_btn.set_size_request(80, 30)
         self.fixed.put(self.ok_btn, SUB_WINDOW_X - 90, SUB_WINDOW_Y - 40)
+
+        cancel_btn = gtk.Button('关闭')
+        cancel_btn.connect("clicked", self.btn_cancel)
+        cancel_btn.set_size_request(80, 30)
+        self.fixed.put(cancel_btn, SUB_WINDOW_X - 80*2 - 20, SUB_WINDOW_Y - 40)
+
+    def get_type_text(self): return self.__type_entry.get_text()
+
+    def btn_cancel(self, widget):
+        if not self.is_save:
+            CNotifyDlg('请先保存数据')
+            return
+        else:
+            self.destroy()
 
     def get_text_view(self):
         start = self.__textView.get_buffer().get_start_iter()
         end = self.__textView.get_buffer().get_end_iter()
         return self.__textView.get_buffer().get_text(start, end)
+
+    def btn_cb(self, widget, data):
+        _text = self.get_text_view()
+        _type = self.get_type_text()
+        path = os.getcwd() + "/type/type_%s" % _type
+
+        if "find" == data:
+            self.set_is_save(True)
+            _type = self.get_type_text()
+            if not os.path.exists(path):
+                CNotifyDlg('未查找到%s病史' % _type)
+                return
+            fp = open(path, 'r')
+            _text = ""
+            i = 1
+            for line in fp.readlines():
+                if line.strip() == "":
+                    continue
+                _text += "%d:%s" % (i, line.strip().replace('|', '\n'))
+                _text += '\n'
+                i += 1
+            self.set_text_view(_text)
+            fp.close()
+        elif "add" == data:
+            self.set_is_save(True)
+            if not os.path.exists(path):
+                os.system("touch %s" % path)
+            fp = open(path, 'a+')
+            fp.write('\n\n')
+            fp.write(_text.replace('\n', '|'))
+            fp.close()
+            CNotifyDlg('添加成功')
+        elif "modify" == data:
+            self.set_is_save(True)
+            fp = open(path, 'w+')
+            fp.write('\n\n')
+            fp.write(_text.replace('\n', '|'))
+            fp.close()
+            CNotifyDlg('修改成功')
 
     def set_text_view(self, _text):
         self.__textView.get_buffer().set_text(_text)
@@ -125,104 +198,45 @@ class BaseWindow(gtk.Window):
 class CFindData(BaseWindow):
     def __init__(self, _parent):
         super(CFindData, self).__init__(_parent)
-        self.set_window_title("病史查询")
         self.set_label("病史查询")
-        self.__type_entry = gtk.Entry()
-
         self.init()
         self.show_all()
 
     def init(self):
-
-        start_x = (SUB_WINDOW_X - 400) / 2
-        start_y = 120
-        _label = gtk.Label("病史类型")
-        modify_font(_label, 15)
-        self.fixed.put(_label, start_x, start_y)
-
-        start_y += 35
-        self.__type_entry.set_size_request(200, 30)
-        self.fixed.put(self.__type_entry, start_x, start_y)
-
-        self.set_btn_label('搜索')
-        self.ok_btn.connect("clicked", self.btn_cb)
-        start_y += 35
-        self.add_scroll(start_x, start_y)
         self.set_editable(False)
-
+        self.set_is_save(True)
+        self.ok_btn.connect("clicked", self.btn_cb, 'find')
         self.show_all()
 
-    def btn_cb(self, widget):
-        _type = self.__type_entry.get_text()
-        path = os.getcwd() + "/type/type_%s" % _type
-        if not os.path.exists(path):
-            CNotifyDlg('未查找到%s病史' % _type)
-            return
-        fp = open(path, 'r')
-        _text = ""
-        i = 1
-        for line in fp.readlines():
-            if line.strip() == "":
-                continue
-            _text += "%d:%s" % (i, line.strip())
-            _text += '\n'
-            i += 1
-        self.set_text_view(_text)
-        fp.close()
 
-
-class CDeleteData(BaseWindow):
+class CModifyData(BaseWindow):
     def __init__(self, _parent):
-        super(CDeleteData, self).__init__(_parent)
-        self.set_window_title("病史修改")
+        super(CModifyData, self).__init__(_parent)
         self.set_label("病史修改")
         self.show_all()
+        self.set_is_save(False)
+        self.init()
+        self.show_all()
+
+    def init(self):
+        self.ok_btn.connect("clicked", self.btn_cb, "modify")
+        self.set_btn_label('修改')
+        _ok_btn = gtk.Button('查询')
+        _ok_btn.set_size_request(80, 30)
+        _ok_btn.connect("clicked", self.btn_cb, 'find')
+        self.fixed.put(_ok_btn, SUB_WINDOW_X - 3*80 - 30, SUB_WINDOW_Y - 40)
 
 
 class CAddData(BaseWindow):
     def __init__(self, _parent):
         super(CAddData, self).__init__(_parent)
-        self.set_window_title("病史增加")
         self.set_label("病史增加")
-
-        self.__type = ""
-        self.__type_entry = gtk.Entry()
         self.init()
+        self.set_is_save(False)
         self.show_all()
 
     def init(self):
-        start_x = (SUB_WINDOW_X-400)/2
-        start_y = 120
-        _label = gtk.Label("病史类型")
-        modify_font(_label, 15)
-        self.fixed.put(_label, start_x, start_y)
-
-        start_y += 35
-        self.__type_entry.set_size_request(200, 30)
-        self.fixed.put(self.__type_entry, start_x, start_y)
-
-        start_y += 35
-        _label = gtk.Label("解决方案")
-        modify_font(_label, 15)
-        self.fixed.put(_label, start_x, start_y)
-
-        start_y += 50
-        self.add_scroll(start_x, start_y)
-
-        self.ok_btn.connect("clicked", self.btn_cb)
-
-    def btn_cb(self, widget):
-        _text = self.get_text_view()
-        _type = self.__type_entry.get_text()
-        path = os.getcwd() + "/type/type_%s" % _type
-        if not os.path.exists(path):
-            os.system("touch %s" % path)
-        fp = open(path, 'a+')
-        fp.write('\n\n')
-        fp.write(_text.replace('\n', '|'))
-        fp.close()
-
-        self.destroy()
+        self.ok_btn.connect("clicked", self.btn_cb, 'add')
 
 
 class CForgotPassword(BaseWindow):
