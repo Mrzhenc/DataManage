@@ -177,8 +177,6 @@ class BaseWindow(gtk.Window):
 
     def btn_cb(self, widget, data):
         _text = self.get_text_view()
-        if _text == "":
-            return
         _type = self.get_combobox_active()
         path = os.getcwd() + "/type/type_%s" % _type
 
@@ -199,6 +197,8 @@ class BaseWindow(gtk.Window):
             self.set_text_view(_text)
             fp.close()
         elif "add" == data:
+            if _text == "":
+                return
             _type = self.get_type_text()
             path = os.getcwd() + "/type/type_%s" % _type
             self.set_is_save(True)
