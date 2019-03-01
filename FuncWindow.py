@@ -122,6 +122,9 @@ class BaseWindow(gtk.Window):
     def get_type_text(self): return self.__type_entry.get_text()
 
     def btn_cancel(self, widget):
+        if self.get_type_text() == "" and self.get_text_view() == "":
+            self.destroy()
+            return
         if not self.is_save:
             CNotifyDlg('请先保存数据')
             return
