@@ -80,6 +80,7 @@ class BaseWindow(gtk.Window):
         self.__textView = gtk.TextView(_textBuf)
         self.ok_btn = gtk.Button('确定')
         self.__type_entry = gtk.Entry()
+        self.__type_combobox = gtk.combo_box_new_text()
         self.ui_init()
 
     def get_is_save(self): return self.is_save
@@ -91,6 +92,12 @@ class BaseWindow(gtk.Window):
 
     def set_window_size(self, x, y):
         self.set_size_request(x, y)
+
+    def get_type_from_file(self):
+        path = os.getcwd() + "/type/"
+        if not os.path.exists(path):
+            return []
+        return commands.getoutput("ls %s" % path).strip().split('\n')
 
     def ui_init(self):
         self.title_label = gtk.Label()
@@ -104,7 +111,22 @@ class BaseWindow(gtk.Window):
         modify_font(_label, 15)
         self.fixed.put(_label, start_x, start_y)
 
-        start_y += 35
+        self.__type_combobox.connect('changed', self.combo_changed)
+        self.__type_combobox.set_wrap_width(1)
+        self.__type_combobox.set_size_request(150, 35)
+        type_list = self.get_type_from_file()
+        for type in type_list:
+            try:
+                t = type.strip().split('_')[1]
+                if t == "":
+                    continue
+                self.__type_combobox.append_text(t)
+            except IndexError:
+                continue
+
+        self.fixed.put(self.__type_combobox, start_x+100, start_y+5)
+
+        start_y += 40
         self.__type_entry.set_size_request(200, 30)
         self.fixed.put(self.__type_entry, start_x, start_y)
 
@@ -119,7 +141,24 @@ class BaseWindow(gtk.Window):
         cancel_btn.set_size_request(80, 30)
         self.fixed.put(cancel_btn, SUB_WINDOW_X - 80*2 - 20, SUB_WINDOW_Y - 40)
 
-    def get_type_text(self): return self.__type_entry.get_text()
+    def hide_type_entry(self):
+        self.__type_entry.hide()
+
+    def combo_changed(self, widget):
+        _type = widget.get_active_text()
+        if _type == '添加':
+            self.__type_entry.show()
+        else:
+            self.__type_entry.hide()
+
+    def get_type_text(self):
+        return self.__type_entry.get_text()
+
+    def append_add_combobox(self):
+        self.__type_combobox.append_text('添加')
+
+    def get_combobox_active(self):
+        return self.__type_combobox.get_active_text()
 
     def btn_cancel(self, widget):
         if self.get_type_text() == "" and self.get_text_view() == "":
@@ -138,12 +177,13 @@ class BaseWindow(gtk.Window):
 
     def btn_cb(self, widget, data):
         _text = self.get_text_view()
-        _type = self.get_type_text()
+        if _text == "":
+            return
+        _type = self.get_combobox_active()
         path = os.getcwd() + "/type/type_%s" % _type
 
         if "find" == data:
             self.set_is_save(True)
-            _type = self.get_type_text()
             if not os.path.exists(path):
                 CNotifyDlg('未查找到%s病史' % _type)
                 return
@@ -159,6 +199,8 @@ class BaseWindow(gtk.Window):
             self.set_text_view(_text)
             fp.close()
         elif "add" == data:
+            _type = self.get_type_text()
+            path = os.getcwd() + "/type/type_%s" % _type
             self.set_is_save(True)
             if not os.path.exists(path):
                 os.system("touch %s" % path)
@@ -204,6 +246,7 @@ class CFindData(BaseWindow):
         self.set_label("病史查询")
         self.init()
         self.show_all()
+        self.hide_type_entry()
 
     def init(self):
         self.set_editable(False)
@@ -220,6 +263,7 @@ class CModifyData(BaseWindow):
         self.set_is_save(False)
         self.init()
         self.show_all()
+        self.hide_type_entry()
 
     def init(self):
         self.ok_btn.connect("clicked", self.btn_cb, "modify")
@@ -237,6 +281,8 @@ class CAddData(BaseWindow):
         self.init()
         self.set_is_save(False)
         self.show_all()
+        self.hide_type_entry()
+        self.append_add_combobox()
 
     def init(self):
         self.ok_btn.connect("clicked", self.btn_cb, 'add')
