@@ -7,6 +7,7 @@ import gobject
 import ConfigParser
 import pango
 from gtk import gdk
+import commands
 
 WINDOW_X_SIZE = int(gdk.screen_width())
 WINDOW_Y_SIZE = int(gdk.screen_height())

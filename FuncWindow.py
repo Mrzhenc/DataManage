@@ -81,6 +81,7 @@ class BaseWindow(gtk.Window):
         self.ok_btn = gtk.Button('确定')
         self.__type_entry = gtk.Entry()
         self.__type_combobox = gtk.combo_box_new_text()
+        self.is_add = False
         self.ui_init()
 
     def get_is_save(self): return self.is_save
@@ -147,6 +148,7 @@ class BaseWindow(gtk.Window):
     def combo_changed(self, widget):
         _type = widget.get_active_text()
         if _type == '添加':
+            self.is_add = True
             self.__type_entry.show()
         else:
             self.__type_entry.hide()
@@ -199,7 +201,10 @@ class BaseWindow(gtk.Window):
         elif "add" == data:
             if _text == "":
                 return
-            _type = self.get_type_text()
+            if self.is_add:
+                _type = self.get_type_text()
+            else:
+                _type = self.get_combobox_active()
             path = os.getcwd() + "/type/type_%s" % _type
             self.set_is_save(True)
             if not os.path.exists(path):
@@ -209,6 +214,7 @@ class BaseWindow(gtk.Window):
             fp.write(_text.replace('\n', '|'))
             fp.close()
             CNotifyDlg('添加成功')
+            self.destroy()
         elif "modify" == data:
             self.set_is_save(True)
             fp = open(path, 'w+')
